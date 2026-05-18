@@ -1,0 +1,2595 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>이차부등식 탐구활동 — 이차함수 그래프와 부등식의 해</title>
+
+<!-- KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js">
+/* ═══════════════════════════════════════════════
+   튜토리얼 시스템 (탐구 1 전용)
+═══════════════════════════════════════════════ */
+
+// 단계 정의
+const TUT_STEPS = [
+  {
+    badge: 'STEP 1 / 6',
+    title: '탐구 1에 오신 걸 환영해요! 👋',
+    desc: '이번 탐구에서는 <strong>이차함수 그래프</strong>를 보면서 이차부등식의 해를 직접 찾아봐요. 총 6단계로 안내해 드릴게요.',
+    target: null,   // 전체 화면 중앙
+    arrow: null,
+  },
+  {
+    badge: 'STEP 2 / 6',
+    title: '① 그래프를 관찰해봐요',
+    desc: '지금 보이는 그래프는 <strong>y = x² − x − 2</strong> 예요. 그래프가 x축과 몇 번 만나나요? 만나는 점(교점)의 x좌표를 확인해봐요.',
+    target: '.canvas-wrap',
+    arrow: 'right',
+  },
+  {
+    badge: 'STEP 3 / 6',
+    title: '② 색깔로 구간을 구분해요',
+    desc: '<strong style="color:#1a73e8">파란 선</strong>은 그래프가 x축보다 위(y > 0)인 구간, <strong style="color:#e87d1a">주황 선</strong>은 x축보다 아래(y < 0)인 구간이에요. 각 구간의 x 범위를 눈으로 확인해봐요.',
+    target: '.canvas-wrap',
+    arrow: 'right',
+  },
+  {
+    badge: 'STEP 4 / 6',
+    title: '③ 부등식 버튼을 눌러봐요',
+    desc: '오른쪽 버튼 중 <strong>y ≥ 0</strong> 부터 눌러보세요. 그래프와 수직선에서 해당하는 구간이 강조돼요. 4개 버튼을 모두 눌러보면서 해가 어떻게 바뀌는지 관찰해봐요!',
+    target: '.ineq-section',
+    arrow: 'left',
+  },
+  {
+    badge: 'STEP 5 / 6',
+    title: '④ 수직선에서 해를 확인해요',
+    desc: '아래 <strong>수직선</strong>을 보면 해당 부등식의 해 범위가 표시돼요. ● 은 그 점을 포함하고, ○ 은 포함하지 않아요.',
+    target: '.numberline-wrap',
+    arrow: 'right',
+  },
+  {
+    badge: 'STEP 6 / 6  🎉',
+    title: '⑤ 스스로 확인하고 정리표를 채워요',
+    desc: '<strong>해 확인하기</strong> 버튼으로 정답을 확인한 뒤, 아래 <strong>정리표</strong>에 D > 0 행을 직접 채워보세요. 탐구 2, 3도 같은 방법으로 진행하면 돼요!',
+    target: '.right-panel',
+    arrow: 'left',
+    finish: true,
+  },
+];
+
+let tutStep = 0;
+let tutActive = false;
+
+function tutStart() {
+  // 탐구 1로 이동
+  if (currentStage !== 1) setStage(1);
+  tutStep = 0;
+  tutActive = true;
+  document.getElementById('tutOverlay').classList.add('active');
+  document.getElementById('tutStartBtn').classList.add('hidden');
+  tutRender();
+}
+
+function tutEnd() {
+  tutActive = false;
+  document.getElementById('tutOverlay').classList.remove('active');
+  document.getElementById('tutRing').classList.remove('active');
+  document.getElementById('tutStartBtn').classList.remove('hidden');
+  // backdrop 초기화
+  document.getElementById('tutBackdrop').style.clipPath = '';
+}
+
+function tutNext() {
+  if (tutStep >= TUT_STEPS.length - 1) {
+    tutEnd();
+    showToast('탐구 1을 시작해봐요! 💪');
+    return;
+  }
+  tutStep++;
+  tutRender();
+}
+
+function tutBackdropClick(e) {
+  // backdrop 클릭 시 다음 단계 (카드 영역은 제외)
+  tutNext();
+}
+
+function tutRender() {
+  const step = TUT_STEPS[tutStep];
+  const total = TUT_STEPS.length;
+
+  // 진행 바
+  const prog = document.getElementById('tutProgress');
+  prog.innerHTML = '';
+  for (let i = 0; i < total; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'tut-prog-dot' +
+      (i < tutStep ? ' done' : i === tutStep ? ' active' : '');
+    prog.appendChild(dot);
+  }
+
+  // 텍스트
+  document.getElementById('tutBadge').textContent = step.badge;
+  document.getElementById('tutTitle').textContent = step.title;
+  document.getElementById('tutDesc').innerHTML = step.desc;
+
+  // 마지막 단계 스타일
+  const card = document.getElementById('tutCard');
+  const nextBtn = document.getElementById('tutNextBtn');
+  if (step.finish) {
+    card.classList.add('finish');
+    nextBtn.classList.add('finish');
+    nextBtn.textContent = '탐구 시작! 🚀';
+  } else {
+    card.classList.remove('finish');
+    nextBtn.classList.remove('finish');
+    nextBtn.textContent = tutStep === total - 1 ? '완료' : '다음 →';
+  }
+
+  // 타겟 하이라이트
+  tutHighlight(step.target, step.arrow);
+}
+
+function tutHighlight(selector, arrowDir) {
+  const ring  = document.getElementById('tutRing');
+  const card  = document.getElementById('tutCard');
+  const backdrop = document.getElementById('tutBackdrop');
+
+  if (!selector) {
+    // 타겟 없음 → 중앙 카드, 배경 어둡게
+    ring.classList.remove('active');
+    backdrop.style.clipPath = '';
+
+    // 카드 중앙 배치
+    card.style.cssText = '';
+    card.className = 'tut-card';
+    card.style.top  = '50%';
+    card.style.left = '50%';
+    card.style.transform = 'translate(-50%, -50%)';
+    return;
+  }
+
+  card.style.transform = '';
+  const el = document.querySelector(selector);
+  if (!el) return;
+
+  const r   = el.getBoundingClientRect();
+  const PAD = 12;
+
+  // 링 위치
+  ring.classList.add('active');
+  ring.style.top    = (r.top  - PAD) + 'px';
+  ring.style.left   = (r.left - PAD) + 'px';
+  ring.style.width  = (r.width  + PAD*2) + 'px';
+  ring.style.height = (r.height + PAD*2) + 'px';
+
+  // spotlight: backdrop에 구멍 뚫기 (clip-path even-odd rule)
+  const x1 = r.left - PAD, y1 = r.top - PAD;
+  const x2 = r.right + PAD, y2 = r.bottom + PAD;
+  const W  = window.innerWidth,  H = window.innerHeight;
+  backdrop.style.clipPath =
+    `polygon(0 0, ${W}px 0, ${W}px ${H}px, 0 ${H}px, ` +
+    `0 0, ` +
+    `${x1}px ${y1}px, ${x1}px ${y2}px, ${x2}px ${y2}px, ${x2}px ${y1}px, ${x1}px ${y1}px)`;
+
+  // 카드 위치 결정 (타겟 기준)
+  card.className = `tut-card arrow-${arrowDir || 'top'}`;
+  const CARD_W = 310;
+
+  if (arrowDir === 'right') {
+    // 카드가 타겟 왼쪽에
+    const left = Math.max(8, x1 - CARD_W - 20);
+    const top  = Math.min(H - 250, Math.max(60, r.top));
+    card.style.left   = left + 'px';
+    card.style.top    = top + 'px';
+    card.style.right  = '';
+    card.style.bottom = '';
+  } else if (arrowDir === 'left') {
+    // 카드가 타겟 오른쪽에
+    const left = Math.min(W - CARD_W - 8, x2 + 20);
+    const top  = Math.min(H - 250, Math.max(60, r.top));
+    card.style.left   = left + 'px';
+    card.style.top    = top + 'px';
+    card.style.right  = '';
+    card.style.bottom = '';
+  } else {
+    // 기본: 타겟 아래
+    card.style.left   = Math.max(8, r.left) + 'px';
+    card.style.top    = (r.bottom + 20) + 'px';
+    card.style.right  = '';
+    card.style.bottom = '';
+  }
+}
+
+// 화면 리사이즈 시 튜토리얼 위치 재계산
+window.addEventListener('resize', () => {
+  if (tutActive && TUT_STEPS[tutStep]) {
+    const step = TUT_STEPS[tutStep];
+    tutHighlight(step.target, step.arrow);
+  }
+});
+
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="initKaTeX()">
+/* ═══════════════════════════════════════════════
+   튜토리얼 시스템 (탐구 1 전용)
+═══════════════════════════════════════════════ */
+
+// 단계 정의
+const TUT_STEPS = [
+  {
+    badge: 'STEP 1 / 6',
+    title: '탐구 1에 오신 걸 환영해요! 👋',
+    desc: '이번 탐구에서는 <strong>이차함수 그래프</strong>를 보면서 이차부등식의 해를 직접 찾아봐요. 총 6단계로 안내해 드릴게요.',
+    target: null,   // 전체 화면 중앙
+    arrow: null,
+  },
+  {
+    badge: 'STEP 2 / 6',
+    title: '① 그래프를 관찰해봐요',
+    desc: '지금 보이는 그래프는 <strong>y = x² − x − 2</strong> 예요. 그래프가 x축과 몇 번 만나나요? 만나는 점(교점)의 x좌표를 확인해봐요.',
+    target: '.canvas-wrap',
+    arrow: 'right',
+  },
+  {
+    badge: 'STEP 3 / 6',
+    title: '② 색깔로 구간을 구분해요',
+    desc: '<strong style="color:#1a73e8">파란 선</strong>은 그래프가 x축보다 위(y > 0)인 구간, <strong style="color:#e87d1a">주황 선</strong>은 x축보다 아래(y < 0)인 구간이에요. 각 구간의 x 범위를 눈으로 확인해봐요.',
+    target: '.canvas-wrap',
+    arrow: 'right',
+  },
+  {
+    badge: 'STEP 4 / 6',
+    title: '③ 부등식 버튼을 눌러봐요',
+    desc: '오른쪽 버튼 중 <strong>y ≥ 0</strong> 부터 눌러보세요. 그래프와 수직선에서 해당하는 구간이 강조돼요. 4개 버튼을 모두 눌러보면서 해가 어떻게 바뀌는지 관찰해봐요!',
+    target: '.ineq-section',
+    arrow: 'left',
+  },
+  {
+    badge: 'STEP 5 / 6',
+    title: '④ 수직선에서 해를 확인해요',
+    desc: '아래 <strong>수직선</strong>을 보면 해당 부등식의 해 범위가 표시돼요. ● 은 그 점을 포함하고, ○ 은 포함하지 않아요.',
+    target: '.numberline-wrap',
+    arrow: 'right',
+  },
+  {
+    badge: 'STEP 6 / 6  🎉',
+    title: '⑤ 스스로 확인하고 정리표를 채워요',
+    desc: '<strong>해 확인하기</strong> 버튼으로 정답을 확인한 뒤, 아래 <strong>정리표</strong>에 D > 0 행을 직접 채워보세요. 탐구 2, 3도 같은 방법으로 진행하면 돼요!',
+    target: '.right-panel',
+    arrow: 'left',
+    finish: true,
+  },
+];
+
+let tutStep = 0;
+let tutActive = false;
+
+function tutStart() {
+  // 탐구 1로 이동
+  if (currentStage !== 1) setStage(1);
+  tutStep = 0;
+  tutActive = true;
+  document.getElementById('tutOverlay').classList.add('active');
+  document.getElementById('tutStartBtn').classList.add('hidden');
+  tutRender();
+}
+
+function tutEnd() {
+  tutActive = false;
+  document.getElementById('tutOverlay').classList.remove('active');
+  document.getElementById('tutRing').classList.remove('active');
+  document.getElementById('tutStartBtn').classList.remove('hidden');
+  // backdrop 초기화
+  document.getElementById('tutBackdrop').style.clipPath = '';
+}
+
+function tutNext() {
+  if (tutStep >= TUT_STEPS.length - 1) {
+    tutEnd();
+    showToast('탐구 1을 시작해봐요! 💪');
+    return;
+  }
+  tutStep++;
+  tutRender();
+}
+
+function tutBackdropClick(e) {
+  // backdrop 클릭 시 다음 단계 (카드 영역은 제외)
+  tutNext();
+}
+
+function tutRender() {
+  const step = TUT_STEPS[tutStep];
+  const total = TUT_STEPS.length;
+
+  // 진행 바
+  const prog = document.getElementById('tutProgress');
+  prog.innerHTML = '';
+  for (let i = 0; i < total; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'tut-prog-dot' +
+      (i < tutStep ? ' done' : i === tutStep ? ' active' : '');
+    prog.appendChild(dot);
+  }
+
+  // 텍스트
+  document.getElementById('tutBadge').textContent = step.badge;
+  document.getElementById('tutTitle').textContent = step.title;
+  document.getElementById('tutDesc').innerHTML = step.desc;
+
+  // 마지막 단계 스타일
+  const card = document.getElementById('tutCard');
+  const nextBtn = document.getElementById('tutNextBtn');
+  if (step.finish) {
+    card.classList.add('finish');
+    nextBtn.classList.add('finish');
+    nextBtn.textContent = '탐구 시작! 🚀';
+  } else {
+    card.classList.remove('finish');
+    nextBtn.classList.remove('finish');
+    nextBtn.textContent = tutStep === total - 1 ? '완료' : '다음 →';
+  }
+
+  // 타겟 하이라이트
+  tutHighlight(step.target, step.arrow);
+}
+
+function tutHighlight(selector, arrowDir) {
+  const ring  = document.getElementById('tutRing');
+  const card  = document.getElementById('tutCard');
+  const backdrop = document.getElementById('tutBackdrop');
+
+  if (!selector) {
+    // 타겟 없음 → 중앙 카드, 배경 어둡게
+    ring.classList.remove('active');
+    backdrop.style.clipPath = '';
+
+    // 카드 중앙 배치
+    card.style.cssText = '';
+    card.className = 'tut-card';
+    card.style.top  = '50%';
+    card.style.left = '50%';
+    card.style.transform = 'translate(-50%, -50%)';
+    return;
+  }
+
+  card.style.transform = '';
+  const el = document.querySelector(selector);
+  if (!el) return;
+
+  const r   = el.getBoundingClientRect();
+  const PAD = 12;
+
+  // 링 위치
+  ring.classList.add('active');
+  ring.style.top    = (r.top  - PAD) + 'px';
+  ring.style.left   = (r.left - PAD) + 'px';
+  ring.style.width  = (r.width  + PAD*2) + 'px';
+  ring.style.height = (r.height + PAD*2) + 'px';
+
+  // spotlight: backdrop에 구멍 뚫기 (clip-path even-odd rule)
+  const x1 = r.left - PAD, y1 = r.top - PAD;
+  const x2 = r.right + PAD, y2 = r.bottom + PAD;
+  const W  = window.innerWidth,  H = window.innerHeight;
+  backdrop.style.clipPath =
+    `polygon(0 0, ${W}px 0, ${W}px ${H}px, 0 ${H}px, ` +
+    `0 0, ` +
+    `${x1}px ${y1}px, ${x1}px ${y2}px, ${x2}px ${y2}px, ${x2}px ${y1}px, ${x1}px ${y1}px)`;
+
+  // 카드 위치 결정 (타겟 기준)
+  card.className = `tut-card arrow-${arrowDir || 'top'}`;
+  const CARD_W = 310;
+
+  if (arrowDir === 'right') {
+    // 카드가 타겟 왼쪽에
+    const left = Math.max(8, x1 - CARD_W - 20);
+    const top  = Math.min(H - 250, Math.max(60, r.top));
+    card.style.left   = left + 'px';
+    card.style.top    = top + 'px';
+    card.style.right  = '';
+    card.style.bottom = '';
+  } else if (arrowDir === 'left') {
+    // 카드가 타겟 오른쪽에
+    const left = Math.min(W - CARD_W - 8, x2 + 20);
+    const top  = Math.min(H - 250, Math.max(60, r.top));
+    card.style.left   = left + 'px';
+    card.style.top    = top + 'px';
+    card.style.right  = '';
+    card.style.bottom = '';
+  } else {
+    // 기본: 타겟 아래
+    card.style.left   = Math.max(8, r.left) + 'px';
+    card.style.top    = (r.bottom + 20) + 'px';
+    card.style.right  = '';
+    card.style.bottom = '';
+  }
+}
+
+// 화면 리사이즈 시 튜토리얼 위치 재계산
+window.addEventListener('resize', () => {
+  if (tutActive && TUT_STEPS[tutStep]) {
+    const step = TUT_STEPS[tutStep];
+    tutHighlight(step.target, step.arrow);
+  }
+});
+
+</script>
+
+<style>
+/* ── 색상 변수 ── */
+:root {
+  --bg: #f7f5f0;
+  --card: #ffffff;
+  --border: #e2ddd6;
+  --text: #1a1614;
+  --text-sub: #6b6560;
+  --blue: #1a73e8;
+  --blue-light: #e8f0fe;
+  --orange: #e87d1a;
+  --orange-light: #fef3e2;
+  --purple: #6a0dad;
+  --purple-light: #f3e8ff;
+  --green: #1e8a4a;
+  --green-light: #e6f4ec;
+  --red: #c0392b;
+  --red-light: #fdecea;
+  --axis: #1a1614;
+  --grid: #e0dcd6;
+  --stage1: #1a73e8;
+  --stage2: #6a0dad;
+  --stage3: #1e8a4a;
+
+  --font-display: 'Noto Serif KR', 'Georgia', serif;
+  --font-body: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── Google Fonts ── */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@600;700&display=swap');
+
+/* ── 헤더 ── */
+.header {
+  background: var(--text);
+  color: #fff;
+  padding: 18px 32px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+}
+.header-badge {
+  background: var(--orange);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.header h1 {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+  50%       { transform: translateY(-5px) rotate(4deg); }
+}
+
+.header-sub {
+  font-size: 13px;
+  color: #bbb;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* ── 탐구 단계 탭 ── */
+.stage-tabs {
+  display: flex;
+  gap: 0;
+  padding: 20px 32px 0;
+  border-bottom: 2px solid var(--border);
+  background: var(--bg);
+}
+.stage-tab {
+  padding: 10px 22px;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-sub);
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s;
+  border-radius: 8px 8px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.stage-tab:hover { background: var(--border); color: var(--text); }
+.stage-tab.active[data-stage="1"] {
+  color: var(--stage1);
+  border-bottom-color: var(--stage1);
+  background: var(--blue-light);
+}
+.stage-tab.active[data-stage="2"] {
+  color: var(--stage2);
+  border-bottom-color: var(--stage2);
+  background: var(--purple-light);
+}
+.stage-tab.active[data-stage="3"] {
+  color: var(--stage3);
+  border-bottom-color: var(--stage3);
+  background: var(--green-light);
+}
+.stage-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.stage-tab[data-stage="1"] .stage-dot { background: var(--stage1); }
+.stage-tab[data-stage="2"] .stage-dot { background: var(--stage2); }
+.stage-tab[data-stage="3"] .stage-dot { background: var(--stage3); }
+
+/* ── 메인 레이아웃 ── */
+.main {
+  display: grid;
+  grid-template-columns: 1fr 520px;
+  gap: 0;
+  min-height: calc(100vh - 120px);
+}
+
+/* ── 그래프 영역 ── */
+.graph-panel {
+  padding: 24px 20px 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.graph-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.func-label {
+  font-size: 20px;
+  font-weight: 700;
+  padding: 6px 16px;
+  border-radius: 8px;
+  font-family: var(--font-mono);
+}
+.d-badge {
+  font-size: 15px;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: 20px;
+}
+.canvas-wrap {
+  position: relative;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+}
+canvas#graphCanvas {
+  display: block;
+  width: 100%;
+  max-width: 620px;
+}
+/* 수직선 */
+.numberline-wrap {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px 10px;
+  box-shadow: 0 1px 8px rgba(0,0,0,0.05);
+}
+.numberline-label {
+  font-size: 14px;
+  color: var(--text-sub);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+canvas#nlCanvas {
+  display: block;
+  width: 100%;
+}
+
+/* ── 우측 패널 ── */
+.right-panel {
+  border-left: 1.5px solid var(--border);
+  background: var(--card);
+  padding: 24px 24px 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+}
+
+/* ── 탐구 안내 카드 ── */
+.guide-card {
+  border-radius: 12px;
+  padding: 16px 18px;
+  border-left: 4px solid;
+}
+.guide-card[data-stage="1"] { background: var(--blue-light); border-color: var(--stage1); }
+.guide-card[data-stage="2"] { background: var(--purple-light); border-color: var(--stage2); }
+.guide-card[data-stage="3"] { background: var(--green-light); border-color: var(--stage3); }
+.guide-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+.guide-card[data-stage="1"] .guide-title { color: var(--stage1); }
+.guide-card[data-stage="2"] .guide-title { color: var(--stage2); }
+.guide-card[data-stage="3"] .guide-title { color: var(--stage3); }
+.guide-text {
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--text);
+}
+
+/* ── 부등식 선택 ── */
+.ineq-section { }
+.section-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-sub);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.ineq-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.ineq-btn {
+  padding: 12px 8px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  cursor: pointer;
+  font-size: 17px;
+  font-weight: 700;
+  text-align: center;
+  transition: all 0.15s;
+  color: var(--text-sub);
+  font-family: var(--font-mono);
+}
+.ineq-btn:hover { border-color: var(--text); color: var(--text); background: #f0ede8; }
+.ineq-btn.active {
+  background: var(--text);
+  color: #fff;
+  border-color: var(--text);
+}
+
+/* ── 해 표시 박스 ── */
+.solution-box {
+  border-radius: 12px;
+  padding: 16px 18px;
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.solution-box.hidden-sol {
+  background: var(--bg);
+  border: 2px dashed var(--border);
+  align-items: center;
+  justify-content: center;
+}
+.solution-box.shown {
+  background: var(--bg);
+  border: 2px solid var(--text);
+}
+.sol-label { font-size: 13px; color: var(--text-sub); font-weight: 600; }
+.sol-value { font-size: 20px; font-weight: 700; }
+.hint-text { font-size: 14px; color: var(--text-sub); text-align: center; }
+.show-sol-btn {
+  margin-top: 4px;
+  padding: 10px 16px;
+  border: 2px solid var(--text);
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  transition: all 0.15s;
+  width: 100%;
+}
+.show-sol-btn:hover { background: var(--text); color: #fff; }
+
+/* ── 범례 ── */
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+.legend-line {
+  width: 32px; height: 4px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.legend-line.blue { background: var(--blue); }
+.legend-line.orange { background: var(--orange); }
+.legend-line.dashed {
+  background: repeating-linear-gradient(to right, #aaa 0, #aaa 5px, transparent 5px, transparent 10px);
+  height: 3px;
+}
+.legend-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.legend-dot.filled { background: var(--purple); }
+.legend-dot.empty { background: #fff; border: 2.5px solid var(--purple); }
+
+/* ── 정리표 ── */
+.summary-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  table-layout: auto;
+  min-width: 420px;
+}
+.summary-table th, .summary-table td {
+  border: 1.5px solid var(--border);
+  padding: 7px 6px;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.summary-table th {
+  background: var(--bg);
+  font-weight: 700;
+  font-size: 12px;
+  white-space: nowrap;
+  padding: 8px 6px;
+}
+.summary-table td {
+  background: #fff;
+}
+.summary-table td.row-header {
+  background: var(--bg);
+  font-weight: 700;
+  font-size: 12px;
+  white-space: nowrap;
+  min-width: 48px;
+}
+.summary-table td:not(.row-header) {
+  min-width: 110px;
+}
+.table-select {
+  width: 100%;
+  min-width: 108px;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  font-size: 12px;
+  text-align: center;
+  font-family: var(--font-body);
+  outline: none;
+  padding: 6px 20px 6px 4px;
+  color: var(--text);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236b6560' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 5px center;
+  transition: border-color 0.15s, background-color 0.15s;
+  white-space: nowrap;
+}
+.table-select:focus { border-color: var(--text); background-color: #fffde7; }
+.table-select.correct {
+  background-color: var(--green-light);
+  border-color: var(--green);
+  color: var(--green);
+  font-weight: 700;
+}
+.table-select.wrong {
+  background-color: var(--red-light);
+  border-color: var(--red);
+  color: var(--red);
+}
+
+/* ── 버튼 그룹 ── */
+.btn-row {
+  display: flex;
+  gap: 8px;
+}
+.btn-check {
+  flex: 1;
+  padding: 13px;
+  background: var(--text);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: var(--font-body);
+}
+.btn-check:hover { background: #333; }
+.btn-reset {
+  padding: 13px 16px;
+  background: transparent;
+  color: var(--text);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--font-body);
+}
+.btn-reset:hover { border-color: var(--text); background: var(--bg); }
+
+/* ── 완료 체크 ── */
+.step-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--text-sub);
+  cursor: pointer;
+  user-select: none;
+}
+.step-check input { width: 18px; height: 18px; accent-color: var(--green); cursor: pointer; }
+.step-check.done { color: var(--green); font-weight: 700; }
+
+/* ══════════════════════════════════════════════
+   반응형 레이아웃
+   - 1180px+  : 기본 (그래프 1fr + 우측 520px)
+   - 900~1180 : 태블릿 가로 (1fr + 460px)
+   - 600~899  : 태블릿 세로 (1fr + 380px) 좌우 유지
+   - ~600     : 모바일 (상하 스택)
+══════════════════════════════════════════════ */
+
+/* ── 태블릿 가로 (900px ~ 1180px) ── */
+@media (min-width: 900px) and (max-width: 1180px) {
+  .main { grid-template-columns: 1fr 460px; }
+  .graph-panel { padding: 16px 12px 16px 20px; }
+  .right-panel { padding: 20px 16px; }
+  .func-label { font-size: 17px; }
+  .summary-table { font-size: 12px; }
+  .summary-table td:not(.row-header) { min-width: 96px; }
+  .table-select { font-size: 11px; min-width: 94px; }
+}
+
+/* ── 태블릿 세로 (600px ~ 899px) — 좌우 분할 유지, 우측 최소화 ── */
+@media (min-width: 600px) and (max-width: 899px) {
+  .main {
+    grid-template-columns: 1fr 340px;
+    min-height: unset;
+  }
+  .graph-panel { padding: 14px 10px 14px 16px; gap: 12px; }
+  .right-panel { padding: 16px 14px; gap: 14px; }
+
+  .stage-tabs {
+    padding: 8px 12px 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .stage-tabs::-webkit-scrollbar { display: none; }
+  .stage-tab { padding: 9px 16px; font-size: 13px; flex-shrink: 0; }
+
+  .func-label { font-size: 15px; padding: 5px 12px; }
+  .d-badge { font-size: 13px; }
+  .legend { display: none; }          /* 태블릿 세로는 범례 숨김 */
+  .guide-text { font-size: 14px; }
+
+  .ineq-buttons { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .ineq-btn { font-size: 14px; padding: 10px 4px; }
+
+  /* 정리표 — 우측 패널 좁으니 스크롤 허용 */
+  .summary-table { font-size: 11px; min-width: 380px; }
+  .summary-table th, .summary-table td { padding: 6px 4px; }
+  .summary-table td:not(.row-header) { min-width: 90px; }
+  .table-select { font-size: 11px; min-width: 88px; padding: 5px 16px 5px 3px; }
+
+  .section-label { font-size: 12px; }
+  .btn-check { font-size: 13px; padding: 10px; }
+  .btn-reset { font-size: 12px; padding: 10px 12px; }
+  .step-check { font-size: 13px; }
+}
+
+/* ── 모바일 (600px 이하) — 상하 스택 ── */
+@media (max-width: 599px) {
+  /* 헤더 */
+  .header { padding: 10px 14px; gap: 8px; }
+  .header h1 { font-size: 15px; }
+  .header-sub { display: none; }
+  .header-badge { font-size: 11px; padding: 2px 8px; }
+
+  /* 탭 */
+  .stage-tabs { padding: 8px 8px 0; gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .stage-tabs::-webkit-scrollbar { display: none; }
+  .stage-tab { padding: 8px 12px; font-size: 13px; flex-shrink: 0; }
+
+  /* 메인: 세로 스택 */
+  .main { grid-template-columns: 1fr; min-height: unset; }
+
+  /* 그래프 패널 */
+  .graph-panel { padding: 12px; gap: 10px; }
+  .graph-title-row { gap: 8px; }
+  .func-label { font-size: 15px; padding: 4px 10px; }
+  .d-badge { font-size: 13px; padding: 3px 10px; }
+  .legend { display: none; }
+  canvas#graphCanvas { max-width: 100%; }
+  .canvas-wrap { max-width: 100%; }
+
+  /* 우측 패널 */
+  .right-panel {
+    border-left: none;
+    border-top: 1.5px solid var(--border);
+    padding: 14px 12px;
+    gap: 14px;
+  }
+  .guide-card { padding: 12px 14px; }
+  .guide-title { font-size: 12px; }
+  .guide-text { font-size: 14px; }
+
+  .ineq-buttons { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .ineq-btn { font-size: 15px; padding: 10px 6px; }
+  .section-label { font-size: 12px; }
+
+  /* 정리표 — 가로 스크롤 */
+  .summary-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .summary-table { font-size: 12px; min-width: 480px; }
+  .summary-table th, .summary-table td { padding: 6px 4px; }
+  .summary-table td:not(.row-header) { min-width: 110px; }
+  .table-select { font-size: 12px; min-width: 108px; }
+
+  .btn-check { font-size: 14px; padding: 11px; }
+  .btn-reset { font-size: 13px; padding: 11px 12px; }
+  .step-check { font-size: 13px; }
+
+  /* 튜토리얼 */
+  .tut-card { width: calc(100vw - 24px); left: 12px !important; right: 12px; }
+  .tut-start-btn { bottom: 16px; right: 16px; font-size: 13px; padding: 10px 16px; }
+
+  /* 토스트 */
+  .toast { font-size: 13px; padding: 10px 20px; white-space: normal; text-align: center; max-width: 280px; }
+}
+
+/* ── 토스트 메시지 ── */
+.toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--text);
+  color: #fff;
+  padding: 14px 28px;
+  border-radius: 40px;
+  font-size: 15px;
+  font-weight: 600;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  transition: transform 0.3s cubic-bezier(.34,1.56,.64,1);
+  z-index: 999;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ══════════════════════════════════════════════
+   튜토리얼 오버레이
+══════════════════════════════════════════════ */
+
+/* 시작 버튼 */
+.tut-start-btn {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  z-index: 900;
+  background: var(--blue);
+  color: #fff;
+  border: none;
+  border-radius: 40px;
+  padding: 13px 22px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: var(--font-body);
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(26,115,232,0.35);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.15s, transform 0.15s;
+}
+.tut-start-btn:hover { background: #1558c0; transform: translateY(-2px); }
+.tut-start-btn.hidden { display: none; }
+
+/* 오버레이 배경 */
+.tut-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
+}
+.tut-overlay.active { display: block; }
+
+/* spotlight: clip-path로 구멍 뚫기 */
+.tut-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 10, 20, 0.62);
+  pointer-events: all;
+  transition: clip-path 0.45s cubic-bezier(.4,0,.2,1);
+  /* 기본: 구멍 없음 */
+  clip-path: polygon(
+    0% 0%, 100% 0%, 100% 100%, 0% 100%,
+    0% 0%
+  );
+}
+
+/* 말풍선 카드 */
+.tut-card {
+  position: absolute;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.22);
+  padding: 22px 24px 18px;
+  width: 310px;
+  pointer-events: all;
+  transition: top 0.4s cubic-bezier(.4,0,.2,1),
+              left 0.4s cubic-bezier(.4,0,.2,1),
+              bottom 0.4s cubic-bezier(.4,0,.2,1),
+              right 0.4s cubic-bezier(.4,0,.2,1);
+  z-index: 1010;
+}
+
+/* 말풍선 꼬리 */
+.tut-card::before {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  transform: rotate(45deg);
+  border-radius: 3px;
+}
+.tut-card.arrow-top::before    { top: -7px; left: 28px; }
+.tut-card.arrow-bottom::before { bottom: -7px; left: 28px; }
+.tut-card.arrow-right::before  { right: -7px; top: 28px; }
+.tut-card.arrow-left::before   { left: -7px; top: 28px; }
+
+/* 카드 내부 */
+.tut-step-badge {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--blue);
+  background: var(--blue-light);
+  border-radius: 20px;
+  padding: 3px 10px;
+  display: inline-block;
+  margin-bottom: 10px;
+}
+.tut-card h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+.tut-card p {
+  font-size: 14px;
+  color: var(--text-sub);
+  line-height: 1.65;
+  margin-bottom: 16px;
+}
+.tut-card p strong { color: var(--text); }
+
+/* 진행 바 */
+.tut-progress {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 14px;
+}
+.tut-prog-dot {
+  height: 4px;
+  flex: 1;
+  border-radius: 2px;
+  background: var(--border);
+  transition: background 0.3s;
+}
+.tut-prog-dot.done { background: var(--blue); }
+.tut-prog-dot.active { background: var(--blue); opacity: 0.5; }
+
+/* 버튼 */
+.tut-btns {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.tut-btn-skip {
+  background: transparent;
+  border: none;
+  color: var(--text-sub);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 8px 4px;
+  font-family: var(--font-body);
+}
+.tut-btn-skip:hover { color: var(--text); }
+.tut-btn-next {
+  background: var(--blue);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: background 0.15s;
+}
+.tut-btn-next:hover { background: #1558c0; }
+
+/* 하이라이트 링 (타겟 요소 위에 표시) */
+.tut-ring {
+  position: fixed;
+  border: 3px solid var(--blue);
+  border-radius: 12px;
+  pointer-events: none;
+  z-index: 1005;
+  box-shadow: 0 0 0 4px rgba(26,115,232,0.18),
+              0 0 20px rgba(26,115,232,0.25);
+  transition: all 0.4s cubic-bezier(.4,0,.2,1);
+  display: none;
+}
+.tut-ring.active { display: block; }
+
+/* 마지막 단계 완료 카드 색상 */
+.tut-card.finish .tut-step-badge {
+  background: var(--green-light);
+  color: var(--green);
+}
+.tut-card.finish h3 { color: var(--green); }
+.tut-btn-next.finish { background: var(--green); }
+.tut-btn-next.finish:hover { background: #176b3a; }
+
+
+/* ══════════════════════════════════════════════
+   완료 팝업 모달
+══════════════════════════════════════════════ */
+.popup-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(10,10,20,0.55);
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+.popup-overlay.open {
+  display: flex;
+  animation: popup-bg-in 0.25s ease;
+}
+@keyframes popup-bg-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.popup-box {
+  background: var(--card);
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.22);
+  width: 100%;
+  max-width: 580px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 32px 28px 28px;
+  position: relative;
+  animation: popup-slide-in 0.35s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes popup-slide-in {
+  from { transform: translateY(40px) scale(0.95); opacity: 0; }
+  to   { transform: translateY(0) scale(1);       opacity: 1; }
+}
+
+/* 닫기 버튼 */
+.popup-close {
+  position: absolute;
+  top: 16px; right: 18px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 50%;
+  width: 34px; height: 34px;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-sub);
+  transition: all 0.15s;
+  line-height: 1;
+}
+.popup-close:hover { background: var(--border); color: var(--text); }
+
+/* 헤더 */
+.popup-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+.popup-emoji {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 10px;
+  animation: popup-bounce 0.6s 0.3s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes popup-bounce {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+.popup-header h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.popup-header p {
+  font-size: 14px;
+  color: var(--text-sub);
+  line-height: 1.6;
+}
+
+/* 구분선 */
+.popup-divider {
+  height: 1.5px;
+  background: var(--border);
+  margin: 18px 0;
+  border: none;
+}
+
+/* 핵심 요약 제목 */
+.popup-summary-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-sub);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+/* 각 경우 카드 */
+.popup-case {
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  border-left: 5px solid;
+}
+.popup-case.d-pos { background: var(--blue-light);   border-color: var(--stage1); }
+.popup-case.d-zer { background: var(--purple-light); border-color: var(--stage2); }
+.popup-case.d-neg { background: var(--green-light);  border-color: var(--stage3); }
+
+.popup-case-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.popup-case.d-pos .popup-case-title { color: var(--stage1); }
+.popup-case.d-zer .popup-case-title { color: var(--stage2); }
+.popup-case.d-neg .popup-case-title { color: var(--stage3); }
+
+.popup-case-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: #fff;
+  opacity: 0.85;
+}
+
+/* 해 그리드 (2×2) */
+.popup-sol-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px 10px;
+}
+.popup-sol-item {
+  font-size: 12.5px;
+  color: var(--text);
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  line-height: 1.5;
+}
+.popup-sol-sign {
+  font-size: 11px;
+  color: var(--text-sub);
+  flex-shrink: 0;
+  min-width: 60px;
+}
+.popup-sol-val {
+  font-weight: 700;
+}
+
+/* 핵심 포인트 박스 */
+.popup-keypoint {
+  background: #fff8e6;
+  border: 1.5px solid #f0c040;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-top: 14px;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--text);
+}
+.popup-keypoint strong { color: #b07000; }
+
+/* 닫기 행 */
+.popup-footer {
+  margin-top: 22px;
+  display: flex;
+  justify-content: center;
+}
+.popup-btn-close {
+  background: var(--text);
+  color: #fff;
+  border: none;
+  border-radius: 40px;
+  padding: 13px 40px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: background 0.15s, transform 0.15s;
+}
+.popup-btn-close:hover { background: #333; transform: translateY(-1px); }
+
+/* 반응형 */
+@media (max-width: 599px) {
+  .popup-box { padding: 24px 18px 20px; border-radius: 20px; }
+  .popup-header h2 { font-size: 18px; }
+  .popup-emoji { font-size: 40px; }
+  .popup-sol-grid { grid-template-columns: 1fr; }
+  .popup-case { padding: 12px 14px; }
+}
+
+</style>
+</head>
+<body>
+
+<!-- ── 헤더 ── -->
+<header class="header">
+  <span class="header-badge">탐구활동</span>
+  <h1>이차함수 그래프와 이차부등식의 해</h1>
+  <span class="header-sub">공통수학1 · Ⅳ. 방정식과 부등식</span>
+</header>
+
+<!-- ── 탐구 단계 탭 ── -->
+<div class="stage-tabs">
+  <button class="stage-tab active" data-stage="1" onclick="setStage(1)">
+    <span class="stage-dot"></span>탐구 1 &nbsp;<span style="font-weight:400;font-size:13px;">D &gt; 0</span>
+  </button>
+  <button class="stage-tab" data-stage="2" onclick="setStage(2)">
+    <span class="stage-dot"></span>탐구 2 &nbsp;<span style="font-weight:400;font-size:13px;">D = 0</span>
+  </button>
+  <button class="stage-tab" data-stage="3" onclick="setStage(3)">
+    <span class="stage-dot"></span>탐구 3 &nbsp;<span style="font-weight:400;font-size:13px;">D &lt; 0</span>
+  </button>
+</div>
+
+<!-- ── 메인 ── -->
+<div class="main">
+
+  <!-- 그래프 패널 -->
+  <div class="graph-panel">
+    <div class="graph-title-row">
+      <div class="func-label" id="funcLabel" style="background:#e8f0fe;color:#1a73e8;"></div>
+      <div class="d-badge" id="dBadge"></div>
+      <div style="margin-left:auto;">
+        <div class="legend">
+          <div class="legend-item"><div class="legend-line blue"></div><span>y &gt; 0 구간 (x축 위)</span></div>
+          <div class="legend-item"><div class="legend-line orange"></div><span>y &lt; 0 구간 (x축 아래)</span></div>
+          <div class="legend-item"><div class="legend-dot filled"></div><span>경계 포함 (●)</span></div>
+          <div class="legend-item"><div class="legend-dot empty"></div><span>경계 미포함 (○)</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 그래프 캔버스 -->
+    <div class="canvas-wrap">
+      <canvas id="graphCanvas" width="620" height="420"></canvas>
+    </div>
+
+    <!-- 수직선 -->
+    <div class="numberline-wrap">
+      <div class="numberline-label">수직선에서 해 범위 확인</div>
+      <canvas id="nlCanvas" width="580" height="70"></canvas>
+    </div>
+  </div>
+
+  <!-- 우측 패널 -->
+  <div class="right-panel">
+
+    <!-- 안내 카드 -->
+    <div class="guide-card" id="guideCard" data-stage="1">
+      <div class="guide-title" id="guideTitle"></div>
+      <div class="guide-text" id="guideText"></div>
+    </div>
+
+    <!-- 부등식 선택 -->
+    <div class="ineq-section">
+      <div class="section-label">부등식 선택</div>
+      <div class="ineq-buttons" id="ineqButtons">
+        <button class="ineq-btn" data-ineq="gt" onclick="setIneq('gt')">y &gt; 0</button>
+        <button class="ineq-btn active" data-ineq="ge" onclick="setIneq('ge')">y ≥ 0</button>
+        <button class="ineq-btn" data-ineq="lt" onclick="setIneq('lt')">y &lt; 0</button>
+        <button class="ineq-btn" data-ineq="le" onclick="setIneq('le')">y ≤ 0</button>
+      </div>
+    </div>
+
+    <!-- 해 표시 -->
+    <div>
+      <div class="section-label">이차부등식의 해</div>
+      <div class="solution-box hidden-sol" id="solutionBox">
+        <div class="hint-text">해를 스스로 생각해본 뒤 아래 버튼을 눌러봐요</div>
+        <button class="show-sol-btn" onclick="showSolution()">💡 해 확인하기</button>
+      </div>
+    </div>
+
+    <!-- 정리표 -->
+    <div>
+      <div class="section-label">📋 정리표 — 스스로 채워보기</div>
+      <div class="summary-table-wrap">
+        <table class="summary-table" id="summaryTable">
+          <thead>
+            <tr>
+              <th>판별식</th>
+              <th>\(f(x)&gt;0\)</th>
+              <th>\(f(x)\geq0\)</th>
+              <th>\(f(x)&lt;0\)</th>
+              <th>\(f(x)\leq0\)</th>
+            </tr>
+          </thead>
+          <tbody id="summaryTbody">
+            <!-- JS로 동적 생성 -->
+          </tbody>
+        </table>
+      </div>
+      <div class="btn-row" style="margin-top:10px;">
+        <button class="btn-check" onclick="checkTable()">✅ 정답 확인</button>
+        <button class="btn-reset" onclick="resetAll()">↺ 초기화</button>
+      </div>
+    </div>
+
+    <!-- 완료 체크 -->
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <label class="step-check" id="check1">
+        <input type="checkbox" onchange="markDone(1,this)">
+        탐구 1 (D&gt;0) 완료했어요
+      </label>
+      <label class="step-check" id="check2">
+        <input type="checkbox" onchange="markDone(2,this)">
+        탐구 2 (D=0) 완료했어요
+      </label>
+      <label class="step-check" id="check3">
+        <input type="checkbox" onchange="markDone(3,this)">
+        탐구 3 (D&lt;0) 완료했어요
+      </label>
+    </div>
+
+  </div><!-- /right-panel -->
+</div><!-- /main -->
+
+<!-- 토스트 -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════
+   상수 & 설정
+═══════════════════════════════════════════════ */
+const STAGES = {
+  1: { a:1, b:-1, c:-2,  // y = x²-x-2 = (x+1)(x-2)
+    funcTex: 'y = x^2 - x - 2',
+    funcStr: 'y = x² - x - 2',
+    color: '#1a73e8',
+    bgColor: '#e8f0fe',
+    guideTitle: '탐구 1 — D > 0 : 서로 다른 두 근',
+    guideText: '그래프가 x축과 두 점에서 만나요.\n파란 구간(y>0)과 주황 구간(y<0)이 어디인지 찾아보세요.\n교점의 x좌표를 기준으로 해가 어떻게 나뉘나요?',
+  },
+  2: { a:1, b:-2, c:1,   // y = x²-2x+1 = (x-1)²
+    funcTex: 'y = x^2 - 2x + 1',
+    funcStr: 'y = x² - 2x + 1',
+    color: '#6a0dad',
+    bgColor: '#f3e8ff',
+    guideTitle: '탐구 2 — D = 0 : 중근 (접함)',
+    guideText: '그래프가 x축에 딱 한 번 닿아요.\n이 그래프가 x축 아래로 내려간 적이 있나요?\n≥와 >일 때 해가 어떻게 다른지 비교해봐요.',
+  },
+  3: { a:1, b:-1, c:1,   // y = x²-x+1, D=-3<0
+    funcTex: 'y = x^2 - x + 1',
+    funcStr: 'y = x² - x + 1',
+    color: '#1e8a4a',
+    bgColor: '#e6f4ec',
+    guideTitle: '탐구 3 — D < 0 : 실근 없음',
+    guideText: 'x축과 만나는 점이 전혀 없어요.\n이 그래프의 y값은 항상 어떤 부호인가요?\ny>0과 y<0의 해는 각각 어떻게 될까요?',
+  }
+};
+
+// 그래프 좌표 설정 (고정)
+const X_MIN = -4, X_MAX = 5;
+const Y_MIN = -5, Y_MAX = 8;
+
+// 정리표 정답 (인덱스 기반)
+// 행: D>0(0), D=0(1), D<0(2) / 열: >0(0), ≥0(1), <0(2), ≤0(3)
+const TABLE_ANSWERS_IDX = [
+  [1, 2, 3, 4],  // D>0
+  [5, 6, 7, 8],  // D=0
+  [6, 6, 7, 7],  // D<0
+];
+
+// 드롭다운 선택지 (value: 인덱스, label: 표시 텍스트)
+const DROPDOWN_OPTIONS = [
+  { v: 0,  label: '— 선택 —' },
+  { v: 1,  label: 'x < α 또는 x > β' },
+  { v: 2,  label: 'x ≤ α 또는 x ≥ β' },
+  { v: 3,  label: 'α < x < β' },
+  { v: 4,  label: 'α ≤ x ≤ β' },
+  { v: 5,  label: 'x ≠ α인 모든 실수' },
+  { v: 6,  label: '모든 실수' },
+  { v: 7,  label: '해 없음' },
+  { v: 8,  label: 'x = α' },
+];
+
+// 드롭다운 섞기 (정답이 항상 같은 위치에 있지 않도록)
+function shuffleOptions(correctV) {
+  const others = DROPDOWN_OPTIONS.filter(o => o.v !== 0 && o.v !== correctV);
+  // 오답 보기 3개 랜덤 선택
+  const shuffled = others.sort(() => Math.random() - 0.5).slice(0, 3);
+  const pool = [DROPDOWN_OPTIONS.find(o => o.v === correctV), ...shuffled];
+  pool.sort(() => Math.random() - 0.5);
+  return [DROPDOWN_OPTIONS[0], ...pool]; // 맨 앞에 "— 선택 —"
+}
+
+// 정리표 tbody 동적 생성
+function buildSummaryTable() {
+  const rowHeaders = ['D &gt; 0', 'D = 0', 'D &lt; 0'];
+  const tbody = document.getElementById('summaryTbody');
+  tbody.innerHTML = '';
+  for (let r = 0; r < 3; r++) {
+    const tr = document.createElement('tr');
+    const th = document.createElement('td');
+    th.className = 'row-header';
+    th.style.width = '14%';
+    th.innerHTML = `\\(${['D>0','D=0','D<0'][r]}\\)`;
+    tr.appendChild(th);
+    for (let c = 0; c < 4; c++) {
+      const td = document.createElement('td');
+      const correctV = TABLE_ANSWERS_IDX[r][c];
+      const options = shuffleOptions(correctV);
+      const sel = document.createElement('select');
+      sel.className = 'table-select';
+      sel.dataset.row = r;
+      sel.dataset.col = c;
+      sel.dataset.answer = correctV;
+      options.forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt.v;
+        o.textContent = opt.label;
+        sel.appendChild(o);
+      });
+      td.appendChild(sel);
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+  reRenderMath(tbody);
+}
+
+/* ═══════════════════════════════════════════════
+   상태
+═══════════════════════════════════════════════ */
+let currentStage = 1;
+let currentIneq = 'ge'; // gt / ge / lt / le
+let solutionVisible = false;
+
+/* ═══════════════════════════════════════════════
+   KaTeX 초기화
+═══════════════════════════════════════════════ */
+function initKaTeX() {
+  renderMathInElement(document.body, {
+    delimiters: [
+      { left: '$$', right: '$$', display: true },
+      { left: '\\[', right: '\\]', display: true },
+      { left: '$', right: '$', display: false },
+      { left: '\\(', right: '\\)', display: false },
+    ],
+    throwOnError: false,
+  });
+  updateUI();
+}
+
+function reRenderMath(el) {
+  if (typeof renderMathInElement === 'function') {
+    renderMathInElement(el, {
+      delimiters: [
+        { left: '$$', right: '$$', display: true },
+        { left: '\\[', right: '\\]', display: true },
+        { left: '$', right: '$', display: false },
+        { left: '\\(', right: '\\)', display: false },
+      ],
+      throwOnError: false,
+    });
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   그래프 그리기
+═══════════════════════════════════════════════ */
+const gCanvas = document.getElementById('graphCanvas');
+const gCtx = gCanvas.getContext('2d');
+const nlCanvas = document.getElementById('nlCanvas');
+const nlCtx = nlCanvas.getContext('2d');
+
+function toCanvasX(x) {
+  return (x - X_MIN) / (X_MAX - X_MIN) * gCanvas.width;
+}
+function toCanvasY(y) {
+  return (1 - (y - Y_MIN) / (Y_MAX - Y_MIN)) * gCanvas.height;
+}
+function fromCanvasX(cx) {
+  return cx / gCanvas.width * (X_MAX - X_MIN) + X_MIN;
+}
+
+function calcY(a, b, c, x) { return a*x*x + b*x + c; }
+
+function getDiscriminant(a, b, c) { return b*b - 4*a*c; }
+
+function getRoots(a, b, c) {
+  const D = getDiscriminant(a, b, c);
+  if (D < -0.001) return null;
+  if (Math.abs(D) <= 0.001) {
+    const r = -b / (2*a);
+    return { alpha: r, beta: r, D: 0 };
+  }
+  const sqD = Math.sqrt(D);
+  return { alpha: (-b - sqD)/(2*a), beta: (-b + sqD)/(2*a), D: D };
+}
+
+function drawGraph() {
+  const { a, b, c, color } = STAGES[currentStage];
+  const roots = getRoots(a, b, c);
+  const W = gCanvas.width, H = gCanvas.height;
+  gCtx.clearRect(0, 0, W, H);
+
+  // 배경
+  gCtx.fillStyle = '#fff';
+  gCtx.fillRect(0, 0, W, H);
+
+  // 격자
+  gCtx.strokeStyle = '#e8e4de';
+  gCtx.lineWidth = 1;
+  for (let x = Math.ceil(X_MIN); x <= X_MAX; x++) {
+    const cx = toCanvasX(x);
+    gCtx.beginPath(); gCtx.moveTo(cx, 0); gCtx.lineTo(cx, H); gCtx.stroke();
+  }
+  for (let y = Math.ceil(Y_MIN); y <= Y_MAX; y++) {
+    const cy = toCanvasY(y);
+    gCtx.beginPath(); gCtx.moveTo(0, cy); gCtx.lineTo(W, cy); gCtx.stroke();
+  }
+
+  // 축 레이블
+  gCtx.fillStyle = '#aaa';
+  gCtx.font = '13px sans-serif';
+  gCtx.textAlign = 'center';
+  for (let x = Math.ceil(X_MIN); x <= X_MAX; x++) {
+    if (x === 0) continue;
+    gCtx.fillText(x, toCanvasX(x), toCanvasY(0) + 18);
+  }
+  gCtx.textAlign = 'right';
+  for (let y = Math.ceil(Y_MIN); y <= Y_MAX; y++) {
+    if (y === 0) continue;
+    gCtx.fillText(y, toCanvasX(0) - 6, toCanvasY(y) + 5);
+  }
+
+  // x축
+  gCtx.strokeStyle = '#1a1614';
+  gCtx.lineWidth = 2.5;
+  gCtx.beginPath();
+  gCtx.moveTo(0, toCanvasY(0)); gCtx.lineTo(W, toCanvasY(0)); gCtx.stroke();
+  // y축
+  gCtx.beginPath();
+  gCtx.moveTo(toCanvasX(0), 0); gCtx.lineTo(toCanvasX(0), H); gCtx.stroke();
+  // 화살표
+  const ax0 = toCanvasX(0), ay0 = toCanvasY(0);
+  gCtx.beginPath(); gCtx.moveTo(W-2, ay0); gCtx.lineTo(W-12, ay0-5); gCtx.lineTo(W-12, ay0+5); gCtx.closePath(); gCtx.fillStyle='#1a1614'; gCtx.fill();
+  gCtx.beginPath(); gCtx.moveTo(ax0, 2); gCtx.lineTo(ax0-5, 12); gCtx.lineTo(ax0+5, 12); gCtx.closePath(); gCtx.fill();
+  // 축 이름
+  gCtx.font = 'bold 15px serif'; gCtx.fillStyle = '#1a1614';
+  gCtx.textAlign = 'left'; gCtx.fillText('x', W-10, ay0-8);
+  gCtx.textAlign = 'center'; gCtx.fillText('y', ax0+10, 14);
+
+  // 곡선: 파랑/주황 구분하여 그리기
+  const N = 600;
+  const dx = (X_MAX - X_MIN) / N;
+
+  // 구간 채우기 (y>0 파랑, y<0 주황)
+  const fillBlue = [];
+  const fillOrange = [];
+  let bStart = null, oStart = null;
+  const y0cy = toCanvasY(0);
+
+  for (let i = 0; i <= N; i++) {
+    const x = X_MIN + i * dx;
+    const y = calcY(a, b, c, x);
+    const cx = toCanvasX(x);
+    const cy = toCanvasY(y);
+    if (y >= 0) {
+      if (bStart === null) bStart = { x: cx, cx0: toCanvasX(x) };
+      if (i === N || calcY(a,b,c,X_MIN+(i+1)*dx) < 0) {
+        fillBlue.push({ x1: bStart.x, x2: cx }); bStart = null;
+      }
+    } else {
+      if (oStart === null) oStart = { x: cx };
+      if (i === N || calcY(a,b,c,X_MIN+(i+1)*dx) >= 0) {
+        fillOrange.push({ x1: oStart.x, x2: cx }); oStart = null;
+      }
+    }
+  }
+  // 채우기
+  fillBlue.forEach(seg => {
+    gCtx.fillStyle = 'rgba(26,115,232,0.13)';
+    gCtx.fillRect(seg.x1, 0, seg.x2 - seg.x1, y0cy);
+  });
+  fillOrange.forEach(seg => {
+    gCtx.fillStyle = 'rgba(232,125,26,0.13)';
+    gCtx.fillRect(seg.x1, y0cy, seg.x2 - seg.x1, H - y0cy);
+  });
+
+  // 선택한 부등식 해 강조
+  drawIneqHighlight(a, b, c, roots);
+
+  // 곡선 (파랑/주황 선)
+  gCtx.lineWidth = 3.5;
+  gCtx.lineJoin = 'round';
+  let prevX = null, prevY2 = null;
+
+  for (let i = 0; i <= N; i++) {
+    const x = X_MIN + i * dx;
+    const y = calcY(a, b, c, x);
+    const cx = toCanvasX(x);
+    const cy = toCanvasY(y);
+    const col = (y >= 0) ? '#1a73e8' : '#e87d1a';
+
+    if (i === 0) {
+      gCtx.beginPath();
+      gCtx.strokeStyle = col;
+      gCtx.moveTo(cx, cy);
+    } else {
+      const prevY_val = calcY(a, b, c, X_MIN + (i-1)*dx);
+      const curY_val = y;
+      // 색 바뀌는 지점 처리
+      if ((prevY_val >= 0) !== (curY_val >= 0) && roots) {
+        // 교점에서 선 이음
+        const xCross = (currentStage === 2) ? roots.alpha :
+          (curY_val < 0 ? roots.alpha : roots.beta);
+        const cxCross = toCanvasX(xCross);
+        gCtx.lineTo(cxCross, toCanvasY(0));
+        gCtx.stroke();
+        gCtx.beginPath();
+        gCtx.strokeStyle = col;
+        gCtx.moveTo(cxCross, toCanvasY(0));
+      }
+      gCtx.lineTo(cx, cy);
+      // 색이 다음과 다르면 stroke
+      if (i < N) {
+        const nextY = calcY(a, b, c, X_MIN + (i+1)*dx);
+        if ((y >= 0) !== (nextY >= 0)) { gCtx.stroke(); }
+      }
+    }
+  }
+  gCtx.stroke();
+
+  // 교점 표시
+  if (roots) {
+    const pts = (roots.D === 0) ? [roots.alpha] : [roots.alpha, roots.beta];
+    pts.forEach((r, idx) => {
+      const cx = toCanvasX(r);
+      const cy = toCanvasY(0);
+      // 테두리
+      gCtx.beginPath();
+      gCtx.arc(cx, cy, 8, 0, Math.PI*2);
+      gCtx.fillStyle = '#fff';
+      gCtx.fill();
+      gCtx.strokeStyle = '#6a0dad';
+      gCtx.lineWidth = 3;
+      gCtx.stroke();
+      // 채우기
+      gCtx.beginPath();
+      gCtx.arc(cx, cy, 5, 0, Math.PI*2);
+      gCtx.fillStyle = '#6a0dad';
+      gCtx.fill();
+      // 레이블
+      const rStr = Number.isInteger(r) ? String(r) : (Math.abs(r - Math.round(r)) < 0.001 ? String(Math.round(r)) : r.toFixed(1));
+      const label = (roots.D === 0) ? 'α=β=' + rStr :
+        (idx === 0 ? 'α='+rStr : 'β='+rStr);
+      gCtx.font = 'bold 15px serif';
+      gCtx.fillStyle = '#6a0dad';
+      gCtx.textAlign = 'center';
+      gCtx.fillText(label, cx, cy + (cy < 30 ? 22 : -14));
+    });
+  }
+
+  // 수직선
+  drawNumberLine(a, b, c, roots);
+}
+
+/* 선택한 부등식에 따른 해 강조 */
+function drawIneqHighlight(a, b, c, roots) {
+  const ineq = currentIneq;
+  const W = gCanvas.width, H = gCanvas.height;
+  const y0cy = toCanvasY(0);
+
+  // 해 구간 x 범위 결정
+  let ranges = []; // [{x1, x2}]
+  const D = getDiscriminant(a,b,c);
+
+  if (Math.abs(D) < 0.001) {
+    // D=0
+    const alpha = roots.alpha;
+    if (ineq === 'ge') { ranges = [{x1: X_MIN, x2: X_MAX}]; }
+    else if (ineq === 'gt') { ranges = [{x1: X_MIN, x2: alpha-0.001}, {x1: alpha+0.001, x2: X_MAX}]; }
+    else if (ineq === 'lt' || ineq === 'le') { ranges = []; }
+  } else if (D < 0) {
+    // D<0, a>0 → y 항상 양수
+    if (ineq === 'gt' || ineq === 'ge') { ranges = [{x1: X_MIN, x2: X_MAX}]; }
+    else { ranges = []; }
+  } else {
+    // D>0
+    const alpha = roots.alpha, beta = roots.beta;
+    if (ineq === 'gt') { ranges = [{x1: X_MIN, x2: alpha}, {x1: beta, x2: X_MAX}]; }
+    else if (ineq === 'ge') { ranges = [{x1: X_MIN, x2: alpha}, {x1: beta, x2: X_MAX}]; }
+    else if (ineq === 'lt') { ranges = [{x1: alpha, x2: beta}]; }
+    else if (ineq === 'le') { ranges = [{x1: alpha, x2: beta}]; }
+  }
+
+  // x축 위에 형광 하이라이트
+  gCtx.save();
+  gCtx.strokeStyle = '#f5c400';
+  gCtx.lineWidth = 7;
+  gCtx.globalAlpha = 0.7;
+  ranges.forEach(r => {
+    const cx1 = toCanvasX(Math.max(r.x1, X_MIN));
+    const cx2 = toCanvasX(Math.min(r.x2, X_MAX));
+    gCtx.beginPath();
+    gCtx.moveTo(cx1, y0cy);
+    gCtx.lineTo(cx2, y0cy);
+    gCtx.stroke();
+  });
+  gCtx.restore();
+}
+
+/* 수직선 그리기 */
+function drawNumberLine(a, b, c, roots) {
+  const W = nlCanvas.width, H = nlCanvas.height;
+  nlCtx.clearRect(0, 0, W, H);
+  nlCtx.fillStyle = '#fff';
+  nlCtx.fillRect(0,0,W,H);
+
+  const PAD = 40;
+  const lineY = H * 0.55;
+  const xMin = X_MIN, xMax = X_MAX;
+
+  function toNLx(x) { return PAD + (x - xMin) / (xMax - xMin) * (W - 2*PAD); }
+
+  // 선
+  nlCtx.strokeStyle = '#1a1614';
+  nlCtx.lineWidth = 2;
+  nlCtx.beginPath();
+  nlCtx.moveTo(PAD, lineY); nlCtx.lineTo(W-PAD, lineY); nlCtx.stroke();
+  // 화살표
+  nlCtx.beginPath();
+  nlCtx.moveTo(W-PAD+2, lineY);
+  nlCtx.lineTo(W-PAD-8, lineY-5); nlCtx.lineTo(W-PAD-8, lineY+5); nlCtx.closePath();
+  nlCtx.fillStyle='#1a1614'; nlCtx.fill();
+
+  // 눈금
+  nlCtx.fillStyle = '#666'; nlCtx.font = '13px sans-serif'; nlCtx.textAlign='center';
+  for (let x = Math.ceil(xMin); x <= xMax; x++) {
+    const nx = toNLx(x);
+    nlCtx.beginPath(); nlCtx.moveTo(nx, lineY-5); nlCtx.lineTo(nx, lineY+5); nlCtx.stroke();
+    nlCtx.fillText(x, nx, lineY+18);
+  }
+
+  // 해 강조
+  const D = getDiscriminant(a,b,c);
+  const ineq = currentIneq;
+
+  let openLeft = false, openRight = false;
+  let segments = []; // [{x1, x2, openL, openR}]
+  let infiniteLeft = false, infiniteRight = false;
+
+  const isStrict = (ineq === 'gt' || ineq === 'lt');
+
+  if (Math.abs(D) < 0.001 && roots) {
+    const alpha = roots.alpha;
+    if (ineq === 'ge') {
+      segments = [{x1: xMin, x2: xMax, openL: true, openR: true, inf: true}];
+    } else if (ineq === 'gt') {
+      segments = [
+        {x1: xMin, x2: alpha, openL: true, openR: true, infL: true},
+        {x1: alpha, x2: xMax, openL: true, openR: true, infR: true}
+      ];
+    } else if (ineq === 'le') {
+      // x = α 단일점
+      segments = [{x1: alpha, x2: alpha, openL: false, openR: false, dot: true}];
+    }
+    // lt → 해 없음
+  } else if (D < 0) {
+    if (ineq === 'gt' || ineq === 'ge') {
+      segments = [{x1: xMin, x2: xMax, openL: true, openR: true, infL: true, infR: true}];
+    }
+  } else if (roots) {
+    const alpha = roots.alpha, beta = roots.beta;
+    if (ineq === 'gt') {
+      segments = [
+        {x1: xMin, x2: alpha, openL: true, openR: true, infL: true},
+        {x1: beta, x2: xMax, openL: true, openR: true, infR: true}
+      ];
+    } else if (ineq === 'ge') {
+      segments = [
+        {x1: xMin, x2: alpha, openL: true, openR: false, infL: true},
+        {x1: beta, x2: xMax, openL: false, openR: true, infR: true}
+      ];
+    } else if (ineq === 'lt') {
+      segments = [{x1: alpha, x2: beta, openL: true, openR: true}];
+    } else if (ineq === 'le') {
+      segments = [{x1: alpha, x2: beta, openL: false, openR: false}];
+    }
+  }
+
+  // 그리기
+  segments.forEach(seg => {
+    const nx1 = seg.infL ? PAD : toNLx(seg.x1);
+    const nx2 = seg.infR ? W-PAD : toNLx(seg.x2);
+
+    // 단일점(x=α) 처리 — dot:true이면 선 없이 속이 찬 점만 표시
+    if (seg.dot) {
+      nlCtx.beginPath(); nlCtx.arc(nx1, lineY, 7, 0, Math.PI*2);
+      nlCtx.fillStyle='#6a0dad'; nlCtx.fill();
+      return;
+    }
+
+    nlCtx.strokeStyle = '#1a73e8';
+    nlCtx.lineWidth = 6;
+    nlCtx.beginPath(); nlCtx.moveTo(nx1, lineY); nlCtx.lineTo(nx2, lineY); nlCtx.stroke();
+
+    // 끝점 표시
+    if (!seg.infL) {
+      nlCtx.beginPath(); nlCtx.arc(nx1, lineY, 6, 0, Math.PI*2);
+      if (seg.openL) { nlCtx.fillStyle='#fff'; nlCtx.fill(); nlCtx.strokeStyle='#6a0dad'; nlCtx.lineWidth=2.5; nlCtx.stroke(); }
+      else { nlCtx.fillStyle='#6a0dad'; nlCtx.fill(); }
+    } else {
+      // 무한대 화살표
+      nlCtx.strokeStyle='#1a73e8'; nlCtx.lineWidth=6;
+      nlCtx.beginPath(); nlCtx.moveTo(PAD+6, lineY-6); nlCtx.lineTo(PAD, lineY); nlCtx.lineTo(PAD+6, lineY+6); nlCtx.stroke();
+    }
+    if (!seg.infR) {
+      nlCtx.beginPath(); nlCtx.arc(nx2, lineY, 6, 0, Math.PI*2);
+      if (seg.openR) { nlCtx.fillStyle='#fff'; nlCtx.fill(); nlCtx.strokeStyle='#6a0dad'; nlCtx.lineWidth=2.5; nlCtx.stroke(); }
+      else { nlCtx.fillStyle='#6a0dad'; nlCtx.fill(); }
+    } else {
+      nlCtx.strokeStyle='#1a73e8'; nlCtx.lineWidth=6;
+      nlCtx.beginPath(); nlCtx.moveTo(W-PAD-6, lineY-6); nlCtx.lineTo(W-PAD, lineY); nlCtx.lineTo(W-PAD-6, lineY+6); nlCtx.stroke();
+    }
+  });
+
+  if (segments.length === 0) {
+    // 해 없음
+    nlCtx.font = 'bold 15px serif'; nlCtx.fillStyle = '#c0392b'; nlCtx.textAlign='center';
+    nlCtx.fillText('해 없음', W/2, lineY - 16);
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   해 텍스트 계산
+═══════════════════════════════════════════════ */
+function getSolutionTex(stage, ineq) {
+  const { a, b, c } = STAGES[stage];
+  const D = getDiscriminant(a, b, c);
+  const roots = getRoots(a, b, c);
+
+  if (Math.abs(D) < 0.001) {
+    // D=0
+    const alpha = roots.alpha;
+    const aStr = Number.isInteger(alpha) ? alpha : alpha.toFixed(1);
+    if (ineq === 'ge') return '모든 실수';
+    if (ineq === 'gt') return `x \\neq ${aStr} \\text{ 인 모든 실수}`;
+    if (ineq === 'lt') return '해 없음';
+    if (ineq === 'le') return `x = ${aStr}`;
+  } else if (D < 0) {
+    if (ineq === 'gt' || ineq === 'ge') return '모든 실수';
+    return '해 없음';
+  } else {
+    const alpha = roots.alpha, beta = roots.beta;
+    const aStr = Number.isInteger(alpha) ? alpha : alpha.toFixed(1);
+    const bStr = Number.isInteger(beta) ? beta : beta.toFixed(1);
+    if (ineq === 'gt') return `x < ${aStr} \\text{ 또는 } x > ${bStr}`;
+    if (ineq === 'ge') return `x \\leq ${aStr} \\text{ 또는 } x \\geq ${bStr}`;
+    if (ineq === 'lt') return `${aStr} < x < ${bStr}`;
+    if (ineq === 'le') return `${aStr} \\leq x \\leq ${bStr}`;
+  }
+}
+
+function getIneqTex(ineq) {
+  const { a, b, c, funcTex } = STAGES[currentStage];
+  const sign = { gt: '> 0', ge: '\\geq 0', lt: '< 0', le: '\\leq 0' }[ineq];
+  return `${funcTex} ${sign}`;
+}
+
+/* ═══════════════════════════════════════════════
+   UI 업데이트
+═══════════════════════════════════════════════ */
+function updateUI() {
+  const s = STAGES[currentStage];
+  const { a, b, c } = s;
+  const D = Math.round(getDiscriminant(a,b,c) * 100) / 100;
+
+  // 탭 색
+  document.querySelectorAll('.stage-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.stage-tab[data-stage="${currentStage}"]`).classList.add('active');
+
+  // 함수 레이블
+  const funcLbl = document.getElementById('funcLabel');
+  funcLbl.style.background = s.bgColor;
+  funcLbl.style.color = s.color;
+  funcLbl.textContent = s.funcStr;
+
+  // D 배지
+  const dBadge = document.getElementById('dBadge');
+  const dSign = D > 0.001 ? '> 0' : Math.abs(D) <= 0.001 ? '= 0' : '< 0';
+  const dColor = D > 0.001 ? '#1a73e8' : Math.abs(D) <= 0.001 ? '#6a0dad' : '#1e8a4a';
+  dBadge.style.background = dColor + '18';
+  dBadge.style.color = dColor;
+  dBadge.textContent = `D = ${D} (${dSign})`;
+
+  // 안내 카드
+  const gc = document.getElementById('guideCard');
+  gc.setAttribute('data-stage', currentStage);
+  document.getElementById('guideTitle').textContent = s.guideTitle;
+  document.getElementById('guideText').textContent = s.guideText;
+
+  // 부등식 버튼
+  document.querySelectorAll('.ineq-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.ineq === currentIneq);
+  });
+
+  // 해 박스 초기화 (단계/부등식 바뀌면 다시 숨김)
+  hideSolution();
+
+  // 그래프
+  requestAnimationFrame(drawGraph);
+
+  // KaTeX 재렌더
+  reRenderMath(document.getElementById('guideCard'));
+}
+
+function hideSolution() {
+  solutionVisible = false;
+  const box = document.getElementById('solutionBox');
+  box.className = 'solution-box hidden-sol';
+  box.innerHTML = `
+    <div class="hint-text">해를 스스로 생각해본 뒤 아래 버튼을 눌러봐요</div>
+    <button class="show-sol-btn" onclick="showSolution()">💡 해 확인하기</button>
+  `;
+}
+
+function showSolution() {
+  solutionVisible = true;
+  const ineqTex = getIneqTex(currentIneq);
+  const solTex = getSolutionTex(currentStage, currentIneq);
+  const box = document.getElementById('solutionBox');
+  box.className = 'solution-box shown';
+  box.innerHTML = `
+    <div class="sol-label">부등식: \\(${ineqTex}\\)</div>
+    <div class="sol-value" style="color:#1a1614;">\\(${solTex}\\)</div>
+  `;
+  reRenderMath(box);
+}
+
+/* ═══════════════════════════════════════════════
+   이벤트 핸들러
+═══════════════════════════════════════════════ */
+function setStage(n) {
+  currentStage = n;
+  currentIneq = 'ge';
+  updateUI();
+}
+
+function setIneq(ineq) {
+  currentIneq = ineq;
+  if (solutionVisible) showSolution();
+  document.querySelectorAll('.ineq-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.ineq === ineq);
+  });
+  requestAnimationFrame(drawGraph);
+}
+
+/* ═══════════════════════════════════════════════
+   정리표 채점
+═══════════════════════════════════════════════ */
+function checkTable() {
+  const selects = document.querySelectorAll('.table-select');
+  let correct = 0, filled = 0, total = selects.length;
+  selects.forEach(sel => {
+    const chosen = parseInt(sel.value);
+    const answer = parseInt(sel.dataset.answer);
+    if (chosen === 0) return; // 미선택
+    filled++;
+    const isCorrect = (chosen === answer);
+    sel.classList.toggle('correct', isCorrect);
+    sel.classList.toggle('wrong', !isCorrect);
+    if (isCorrect) correct++;
+  });
+  if (filled === 0) {
+    showToast('먼저 드롭다운에서 선택해봐요! 👆');
+    return;
+  }
+  if (correct === total) {
+    setTimeout(openCompletePopup, 400); // 채점 완료 후 잠깐 후 팝업
+  } else {
+    showToast(`${filled}칸 중 ${correct}칸 정답! 틀린 칸은 그래프를 다시 확인해봐요.`);
+  }
+}
+
+function resetAll() {
+  currentStage = 1; currentIneq = 'ge';
+  buildSummaryTable(); // 드롭다운 재생성 (선택지 순서도 다시 섞임)
+  document.querySelectorAll('.step-check').forEach(l => l.classList.remove('done'));
+  document.querySelectorAll('.step-check input').forEach(cb => cb.checked = false);
+  updateUI();
+  showToast('초기화되었어요.');
+}
+
+function markDone(n, cb) {
+  document.getElementById('check'+n).classList.toggle('done', cb.checked);
+  if (cb.checked) showToast(`탐구 ${n} 완료 체크! 👍`);
+}
+
+/* ═══════════════════════════════════════════════
+   토스트
+═══════════════════════════════════════════════ */
+let toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+/* ═══════════════════════════════════════════════
+   캔버스 반응형
+═══════════════════════════════════════════════ */
+function resizeCanvases() {
+  const wrap = document.querySelector('.canvas-wrap');
+  const w = Math.min(wrap.clientWidth, 620);
+  gCanvas.width = w;
+  gCanvas.height = Math.round(w * 420/620);
+  const nlWrap = document.querySelector('.numberline-wrap');
+  nlCanvas.width = nlWrap.clientWidth - 40;
+  nlCanvas.height = 70;
+  requestAnimationFrame(drawGraph);
+}
+
+window.addEventListener('resize', resizeCanvases);
+
+/* ═══════════════════════════════════════════════
+   시작
+═══════════════════════════════════════════════ */
+window.addEventListener('load', () => {
+  buildSummaryTable();
+  resizeCanvases();
+  if (typeof renderMathInElement !== 'function') {
+    setTimeout(() => { if (typeof renderMathInElement === 'function') initKaTeX(); }, 500);
+  }
+});
+
+/* ═══════════════════════════════════════════════
+   튜토리얼 시스템 (탐구 1 전용)
+═══════════════════════════════════════════════ */
+
+// 단계 정의
+const TUT_STEPS = [
+  {
+    badge: 'STEP 1 / 6',
+    title: '탐구 1에 오신 걸 환영해요! 👋',
+    desc: '이번 탐구에서는 <strong>이차함수 그래프</strong>를 보면서 이차부등식의 해를 직접 찾아봐요. 총 6단계로 안내해 드릴게요.',
+    target: null,   // 전체 화면 중앙
+    arrow: null,
+  },
+  {
+    badge: 'STEP 2 / 6',
+    title: '① 그래프를 관찰해봐요',
+    desc: '지금 보이는 그래프는 <strong>y = x² − x − 2</strong> 예요. 그래프가 x축과 몇 번 만나나요? 만나는 점(교점)의 x좌표를 확인해봐요.',
+    target: '.canvas-wrap',
+    arrow: 'right',
+  },
+  {
+    badge: 'STEP 3 / 6',
+    title: '② 색깔로 구간을 구분해요',
+    desc: '<strong style="color:#1a73e8">파란 선</strong>은 그래프가 x축보다 위(y > 0)인 구간, <strong style="color:#e87d1a">주황 선</strong>은 x축보다 아래(y < 0)인 구간이에요. 각 구간의 x 범위를 눈으로 확인해봐요.',
+    target: '.canvas-wrap',
+    arrow: 'right',
+  },
+  {
+    badge: 'STEP 4 / 6',
+    title: '③ 부등식 버튼을 눌러봐요',
+    desc: '오른쪽 버튼 중 <strong>y ≥ 0</strong> 부터 눌러보세요. 그래프와 수직선에서 해당하는 구간이 강조돼요. 4개 버튼을 모두 눌러보면서 해가 어떻게 바뀌는지 관찰해봐요!',
+    target: '.ineq-section',
+    arrow: 'left',
+  },
+  {
+    badge: 'STEP 5 / 6',
+    title: '④ 수직선에서 해를 확인해요',
+    desc: '아래 <strong>수직선</strong>을 보면 해당 부등식의 해 범위가 표시돼요. ● 은 그 점을 포함하고, ○ 은 포함하지 않아요.',
+    target: '.numberline-wrap',
+    arrow: 'right',
+  },
+  {
+    badge: 'STEP 6 / 6  🎉',
+    title: '⑤ 스스로 확인하고 정리표를 채워요',
+    desc: '<strong>해 확인하기</strong> 버튼으로 정답을 확인한 뒤, 아래 <strong>정리표</strong>에 D > 0 행을 직접 채워보세요. 탐구 2, 3도 같은 방법으로 진행하면 돼요!',
+    target: '.right-panel',
+    arrow: 'left',
+    finish: true,
+  },
+];
+
+let tutStep = 0;
+let tutActive = false;
+
+function tutStart() {
+  // 탐구 1로 이동
+  if (currentStage !== 1) setStage(1);
+  tutStep = 0;
+  tutActive = true;
+  document.getElementById('tutOverlay').classList.add('active');
+  document.getElementById('tutStartBtn').classList.add('hidden');
+  tutRender();
+}
+
+function tutEnd() {
+  tutActive = false;
+  document.getElementById('tutOverlay').classList.remove('active');
+  document.getElementById('tutRing').classList.remove('active');
+  document.getElementById('tutStartBtn').classList.remove('hidden');
+  // backdrop 초기화
+  document.getElementById('tutBackdrop').style.clipPath = '';
+}
+
+function tutNext() {
+  if (tutStep >= TUT_STEPS.length - 1) {
+    tutEnd();
+    showToast('탐구 1을 시작해봐요! 💪');
+    return;
+  }
+  tutStep++;
+  tutRender();
+}
+
+function tutBackdropClick(e) {
+  // backdrop 클릭 시 다음 단계 (카드 영역은 제외)
+  tutNext();
+}
+
+function tutRender() {
+  const step = TUT_STEPS[tutStep];
+  const total = TUT_STEPS.length;
+
+  // 진행 바
+  const prog = document.getElementById('tutProgress');
+  prog.innerHTML = '';
+  for (let i = 0; i < total; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'tut-prog-dot' +
+      (i < tutStep ? ' done' : i === tutStep ? ' active' : '');
+    prog.appendChild(dot);
+  }
+
+  // 텍스트
+  document.getElementById('tutBadge').textContent = step.badge;
+  document.getElementById('tutTitle').textContent = step.title;
+  document.getElementById('tutDesc').innerHTML = step.desc;
+
+  // 마지막 단계 스타일
+  const card = document.getElementById('tutCard');
+  const nextBtn = document.getElementById('tutNextBtn');
+  if (step.finish) {
+    card.classList.add('finish');
+    nextBtn.classList.add('finish');
+    nextBtn.textContent = '탐구 시작! 🚀';
+  } else {
+    card.classList.remove('finish');
+    nextBtn.classList.remove('finish');
+    nextBtn.textContent = tutStep === total - 1 ? '완료' : '다음 →';
+  }
+
+  // 타겟 하이라이트
+  tutHighlight(step.target, step.arrow);
+}
+
+function tutHighlight(selector, arrowDir) {
+  const ring  = document.getElementById('tutRing');
+  const card  = document.getElementById('tutCard');
+  const backdrop = document.getElementById('tutBackdrop');
+
+  if (!selector) {
+    // 타겟 없음 → 중앙 카드, 배경 어둡게
+    ring.classList.remove('active');
+    backdrop.style.clipPath = '';
+
+    // 카드 중앙 배치
+    card.style.cssText = '';
+    card.className = 'tut-card';
+    card.style.top  = '50%';
+    card.style.left = '50%';
+    card.style.transform = 'translate(-50%, -50%)';
+    return;
+  }
+
+  card.style.transform = '';
+  const el = document.querySelector(selector);
+  if (!el) return;
+
+  const r   = el.getBoundingClientRect();
+  const PAD = 12;
+
+  // 링 위치
+  ring.classList.add('active');
+  ring.style.top    = (r.top  - PAD) + 'px';
+  ring.style.left   = (r.left - PAD) + 'px';
+  ring.style.width  = (r.width  + PAD*2) + 'px';
+  ring.style.height = (r.height + PAD*2) + 'px';
+
+  // spotlight: backdrop에 구멍 뚫기 (clip-path even-odd rule)
+  const x1 = r.left - PAD, y1 = r.top - PAD;
+  const x2 = r.right + PAD, y2 = r.bottom + PAD;
+  const W  = window.innerWidth,  H = window.innerHeight;
+  backdrop.style.clipPath =
+    `polygon(0 0, ${W}px 0, ${W}px ${H}px, 0 ${H}px, ` +
+    `0 0, ` +
+    `${x1}px ${y1}px, ${x1}px ${y2}px, ${x2}px ${y2}px, ${x2}px ${y1}px, ${x1}px ${y1}px)`;
+
+  // 카드 위치 결정 (타겟 기준)
+  card.className = `tut-card arrow-${arrowDir || 'top'}`;
+  const CARD_W = 310;
+
+  if (arrowDir === 'right') {
+    // 카드가 타겟 왼쪽에
+    const left = Math.max(8, x1 - CARD_W - 20);
+    const top  = Math.min(H - 250, Math.max(60, r.top));
+    card.style.left   = left + 'px';
+    card.style.top    = top + 'px';
+    card.style.right  = '';
+    card.style.bottom = '';
+  } else if (arrowDir === 'left') {
+    // 카드가 타겟 오른쪽에
+    const left = Math.min(W - CARD_W - 8, x2 + 20);
+    const top  = Math.min(H - 250, Math.max(60, r.top));
+    card.style.left   = left + 'px';
+    card.style.top    = top + 'px';
+    card.style.right  = '';
+    card.style.bottom = '';
+  } else {
+    // 기본: 타겟 아래
+    card.style.left   = Math.max(8, r.left) + 'px';
+    card.style.top    = (r.bottom + 20) + 'px';
+    card.style.right  = '';
+    card.style.bottom = '';
+  }
+}
+
+// 화면 리사이즈 시 튜토리얼 위치 재계산
+window.addEventListener('resize', () => {
+  if (tutActive && TUT_STEPS[tutStep]) {
+    const step = TUT_STEPS[tutStep];
+    tutHighlight(step.target, step.arrow);
+  }
+});
+
+
+/* ═══════════════════════════════════════════════
+   완료 팝업
+═══════════════════════════════════════════════ */
+function openCompletePopup() {
+  const overlay = document.getElementById('completePopup');
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden'; // 배경 스크롤 막기
+}
+
+function closePopup() {
+  const overlay = document.getElementById('completePopup');
+  overlay.classList.remove('open');
+  document.body.style.overflow = '';
+  showToast('🎉 12칸 모두 정답이에요! 훌륭해요!');
+}
+
+function popupBackdropClick(e) {
+  // popup-box 내부 클릭은 무시, overlay 자체 클릭만 닫기
+  if (e.target === document.getElementById('completePopup')) closePopup();
+}
+
+// ESC 키로도 닫기
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closePopup();
+});
+
+</script>
+
+<!-- ── 튜토리얼 시작 버튼 ── -->
+<button class="tut-start-btn" id="tutStartBtn" onclick="tutStart()">
+  🎯 탐구 1 활동 순서 안내
+</button>
+
+<!-- ── 튜토리얼 오버레이 ── -->
+<div class="tut-overlay" id="tutOverlay">
+  <div class="tut-backdrop" id="tutBackdrop" onclick="tutBackdropClick(event)"></div>
+  <div class="tut-ring" id="tutRing"></div>
+  <div class="tut-card" id="tutCard">
+    <div class="tut-progress" id="tutProgress"></div>
+    <div class="tut-step-badge" id="tutBadge"></div>
+    <h3 id="tutTitle"></h3>
+    <p id="tutDesc"></p>
+    <div class="tut-btns">
+      <button class="tut-btn-skip" onclick="tutEnd()">건너뛰기</button>
+      <button class="tut-btn-next" id="tutNextBtn" onclick="tutNext()">다음 →</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── 완료 팝업 ── -->
+<div class="popup-overlay" id="completePopup" onclick="popupBackdropClick(event)">
+  <div class="popup-box" id="popupBox">
+    <button class="popup-close" onclick="closePopup()" aria-label="닫기">✕</button>
+
+    <div class="popup-header">
+      <span class="popup-emoji">🎉</span>
+      <h2>정리표 완성!</h2>
+      <p>12칸을 모두 맞혔어요.<br>이차부등식의 핵심 패턴을 다시 한번 확인해봐요!</p>
+    </div>
+
+    <hr class="popup-divider">
+    <div class="popup-summary-title">📌 꼭 기억할 핵심 정리 (a &gt; 0)</div>
+
+    <!-- D > 0 -->
+    <div class="popup-case d-pos">
+      <div class="popup-case-title">
+        <span class="popup-case-badge">D &gt; 0</span>
+        서로 다른 두 근 α, β 존재 &nbsp;(α &lt; β)
+      </div>
+      <div class="popup-sol-grid">
+        <div class="popup-sol-item">
+          <span class="popup-sol-sign">f(x) &gt; 0</span>
+          <span class="popup-sol-val">x &lt; α 또는 x &gt; β</span>
+        </div>
+        <div class="popup-sol-item">
+          <span class="popup-sol-sign">f(x) ≥ 0</span>
+          <span class="popup-sol-val">x ≤ α 또는 x ≥ β</span>
+        </div>
+        <div class="popup-sol-item">
+          <span class="popup-sol-sign">f(x) &lt; 0</span>
+          <span class="popup-sol-val">α &lt; x &lt; β</span>
+        </div>
+        <div class="popup-sol-item">
+          <span class="popup-sol-sign">f(x) ≤ 0</span>
+          <span class="popup-sol-val">α ≤ x ≤ β</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- D = 0 -->
+    <div class="popup-case d-zer">
+      <div class="popup-case-title">
+        <span class="popup-case-badge">D = 0</span>
+        중근 α 하나 (x축에 접함)
+      </div>
+      <div class="popup-sol-grid">
+        <div class="popup-sol-item">
+          <span class="popup-sol-sign">f(x) &gt; 0</span>
+          <span class="popup-sol-val">x ≠ α인 모든 실수</span>
+        </div>
+        <div class="popup-sol-item">
+          <span class="popup-sol-sign">f(x) ≥ 0</span>
+          <span class="popup-sol-val">모든 실수</span>
+        </div>
+        <div class="popup-sol-item">
+          <span class="popup-sol-sign">f(x) &lt; 0</span>
+          <span class="popup-sol-val">해 없음</span>
+        </div>
+        <div class="popup-sol-item">
+          <span class="popup-sol-sign">f(x) ≤ 0</span>
+          <span class="popup-sol-val">x = α</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- D < 0 -->
+    <div class="popup-case d-neg">
+      <div class="popup-case-title">
+        <span class="popup-case-badge">D &lt; 0</span>
+        실근 없음 (x축과 만나지 않음)
+      </div>
+      <div class="popup-sol-grid">
+        <div class="popup-sol-item">
+          <span class="popup-sol-sign">f(x) &gt; 0</span>
+          <span class="popup-sol-val">모든 실수</span>
+        </div>
+        <div class="popup-sol-item">
+          <span class="popup-sol-sign">f(x) ≥ 0</span>
+          <span class="popup-sol-val">모든 실수</span>
+        </div>
+        <div class="popup-sol-item">
+          <span class="popup-sol-sign">f(x) &lt; 0</span>
+          <span class="popup-sol-val">해 없음</span>
+        </div>
+        <div class="popup-sol-item">
+          <span class="popup-sol-sign">f(x) ≤ 0</span>
+          <span class="popup-sol-val">해 없음</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 핵심 포인트 -->
+    <div class="popup-keypoint">
+      💡 <strong>핵심 원리:</strong> 이차함수 그래프가 <strong>x축 위에 있는 구간</strong>이 바로
+      <strong>f(x) &gt; 0의 해</strong>예요.<br>
+      판별식 D의 부호 → 그래프와 x축의 위치 관계 → 부등식의 해,
+      이 흐름을 항상 떠올려봐요!
+    </div>
+
+    <div class="popup-footer">
+      <button class="popup-btn-close" onclick="closePopup()">확인했어요 ✓</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
